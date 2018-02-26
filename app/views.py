@@ -8,6 +8,9 @@ import os
 from app import app
 from flask import render_template, request, redirect, url_for, flash, session, abort
 from werkzeug.utils import secure_filename
+from flask_wtf.file import FileField, FileRequired
+from forms import UploadForm
+
 
 
 ###
@@ -32,15 +35,25 @@ def upload():
         abort(401)
 
     # Instantiate your form class
-
+    form = UploadForm()
     # Validate file upload on submit
     if request.method == 'POST':
-        # Get file data and save to your uploads folder
+        if form.validate_on_submit():
+            file = form.upload.data
+            filename = secure_filename(file.filename)
+            file.save(os.path.join(app.config['UPLOAD_FOLDER'],  filename))
+            flash('File Saved', 'success')
+            return redirect(url_for('home'))
 
-        flash('File Saved', 'success')
-        return redirect(url_for('home'))
-
-    return render_template('upload.html')
+    return render_template('upload.html', form=form)
+    
+@app.route('/files')
+def files():
+    if not session.get('logged_in'):
+        abort(401)
+        
+    return render_template('files.html', )
+    
 
 
 @app.route('/login', methods=['POST', 'GET'])
@@ -99,6 +112,12 @@ def add_header(response):
 def page_not_found(error):
     """Custom 404 page."""
     return render_template('404.html'), 404
+
+def get_uploaded_images():
+    rootdir = getcwd()
+    for subdir, dirs, files in os.walk(rootdir + '/static/uploads'):
+        for file in files:
+            print(os.path.join(subdir, file)) 
 
 
 if __name__ == '__main__':
